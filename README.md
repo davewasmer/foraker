@@ -3,6 +3,7 @@
 Foraker provides a simple, drop-in controller that support filters, promises, subclassing, and more. It's easy to integrate into existing Express / middleware
 based apps, follows the "do one thing well" principle, and is thoroughly tested.
 
+> **Note:** this is alpha software, and still undergoing changes. Contributions welcome, consumers beware :wink:
 
 ## Install
 
@@ -57,7 +58,7 @@ Here's a basic example of a controller with a single action (`update`), and a si
 // controllers/posts.js
 import Controller from 'foraker';
 
-export default Controller.create({
+export default Controller.extend({
 
   filters() {
     // Run the authenticate function (that is defined on this controller) before
@@ -96,7 +97,7 @@ You can also pass the filter method directly in, rather than referencing it by n
 import Controller from 'foraker';
 import authenticate from '../filters/authenticate';
 
-export default Controller.create({
+export default Controller.extend({
   filters() {
     // If the filter is a string, it's assumed to be a method defined on the
     // controller itself. Alternatively, you can pass in a function directly:
