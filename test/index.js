@@ -9,13 +9,20 @@ function createController(actions) {
 
 function noop() {}
 
-const request = { context: {} };
-const response = {};
+const request = {
+  context: {}
+};
+const response = {
+  headersSent: false,
+  json() {
+    this.headersSent = true;
+  }
+};
 
 describe('foraker', function() {
 
   beforeEach(function() {
-    response.headerSent = false;
+    response.headersSent = false;
   });
 
   it('allows subclasses via static .extend()', function() {
@@ -29,14 +36,14 @@ describe('foraker', function() {
     it('creates a middleware handler which hands off control to the action handler', function() {
       let controller = createController({
         basicActionHandler(req, res) {
-          res.headerSent = true;
+          res.headersSent = true;
           expect(req).to.equal(request);
           expect(res).to.equal(response);
         }
       });
       return controller.action('basicActionHandler', request, response, noop)
         .then(() => {
-          expect(response.headerSent).to.equal(true);
+          expect(response.headersSent).to.equal(true);
         });
     });
   });
@@ -84,14 +91,14 @@ describe('foraker', function() {
       let controller = createController({
         actionThatReturnsAPromise(req, res) {
           return Promise.delay(1).then(() => {
-            res.headerSent = true;
+            res.headersSent = true;
           });
         }
       });
 
       return controller.action('actionThatReturnsAPromise', request, response, noop)
       .then(() => {
-        expect(response.headerSent).to.equal(true);
+        expect(response.headersSent).to.equal(true);
       });
     });
 
@@ -105,7 +112,7 @@ describe('foraker', function() {
         let controller = createController({
           actionThatUsesContext(req, res) {
             expect(this.foo).to.equal('bar');
-            res.headerSent = true;
+            res.headersSent = true;
           }
         });
 
@@ -144,6 +151,21 @@ describe('foraker', function() {
         });
       });
 
+      it('should call not call next() with an "incomplete action" error if a response was sent', function() {
+        let nextRan = false;
+        let controller = createController({
+          actionThatDoesComplete(req, res) {
+            res.json({});
+          }
+        });
+
+        return controller.action('actionThatDoesComplete', request, response, (err) => {
+          nextRan = true;
+        }).then(() => {
+          expect(nextRan).to.equal(false);
+        });
+      });
+
     });
 
     describe('filters', function() {
@@ -156,14 +178,14 @@ describe('foraker', function() {
             this.before('beforeFilter');
             this.after('afterFilter');
           },
-          actionWithFilter(req, res) { res.headerSent = true; },
+          actionWithFilter(req, res) { res.headersSent = true; },
           beforeFilter() { beforeFilterRan = true; },
           afterFilter() { afterFilterRan = true; }
         });
 
         return controller.action('actionWithFilter', request, response, noop)
         .then(() => {
-          expect(response.headerSent).to.equal(true);
+          expect(response.headersSent).to.equal(true);
           expect(beforeFilterRan).to.equal(true);
           expect(afterFilterRan).to.equal(true);
         });
@@ -175,8 +197,8 @@ describe('foraker', function() {
           filters() {
             this.before('beforeFilter', { only: 'actionWithFilter' });
           },
-          actionWithFilter(req, res) { res.headerSent = true; },
-          actionWithoutFilter(req, res) { res.headerSent = true; },
+          actionWithFilter(req, res) { res.headersSent = true; },
+          actionWithoutFilter(req, res) { res.headersSent = true; },
           beforeFilter() { filterRan = true; }
         });
 
@@ -195,9 +217,9 @@ describe('foraker', function() {
           filters() {
             this.before('beforeFilter', { only: [ 'actionWithFilterOne', 'actionWithFilterTwo' ] });
           },
-          actionWithFilterOne(req, res) { res.headerSent = true; },
-          actionWithFilterTwo(req, res) { res.headerSent = true; },
-          actionWithoutFilter(req, res) { res.headerSent = true; },
+          actionWithFilterOne(req, res) { res.headersSent = true; },
+          actionWithFilterTwo(req, res) { res.headersSent = true; },
+          actionWithoutFilter(req, res) { res.headersSent = true; },
           beforeFilter() { filterRan = true; }
         });
 
@@ -220,8 +242,8 @@ describe('foraker', function() {
           filters() {
             this.before('beforeFilter', { except: [ 'actionWithoutFilter' ] });
           },
-          actionWithFilter(req, res) { res.headerSent = true; },
-          actionWithoutFilter(req, res) { res.headerSent = true; },
+          actionWithFilter(req, res) { res.headersSent = true; },
+          actionWithoutFilter(req, res) { res.headersSent = true; },
           beforeFilter() { filterRan = true; }
         });
 
@@ -240,9 +262,9 @@ describe('foraker', function() {
           filters() {
             this.before('beforeFilter', { except: [ 'actionWithoutFilterOne', 'actionWithoutFilterTwo' ] });
           },
-          actionWithFilter(req, res) { res.headerSent = true; },
-          actionWithoutFilterOne(req, res) { res.headerSent = true; },
-          actionWithoutFilterTwo(req, res) { res.headerSent = true; },
+          actionWithFilter(req, res) { res.headersSent = true; },
+          actionWithoutFilterOne(req, res) { res.headersSent = true; },
+          actionWithoutFilterTwo(req, res) { res.headersSent = true; },
           beforeFilter() { filterRan = true; }
         });
 
@@ -265,7 +287,7 @@ describe('foraker', function() {
             this.before('beforeFilterOne');
             this.before('beforeFilterTwo');
           },
-          actionWithMultipleFilters(req, res) { res.headerSent = true; },
+          actionWithMultipleFilters(req, res) { res.headersSent = true; },
           beforeFilterOne() { filtersRun.push('one'); },
           beforeFilterTwo() { filtersRun.push('two'); }
         });
@@ -286,7 +308,7 @@ describe('foraker', function() {
             this.before('beforeFilterOne');
             this.before('beforeFilterTwo');
           },
-          actionWithMultipleFilters(req, res) { res.headerSent = true; },
+          actionWithMultipleFilters(req, res) { res.headersSent = true; },
           beforeFilterOne() { throw err; },
           beforeFilterTwo() { laterFilterRan = true; }
         });
@@ -295,7 +317,7 @@ describe('foraker', function() {
         .catch((errorThrown) => {
           expect(errorThrown).to.equal(err);
           expect(laterFilterRan).to.equal(false);
-          expect(response.headerSent).to.equal(false);
+          expect(response.headersSent).to.equal(false);
         });
       });
 
@@ -307,7 +329,7 @@ describe('foraker', function() {
             this.before('beforeFilterOne');
             this.before('beforeFilterTwo');
           },
-          actionWithMultipleFilters(req, res) { res.headerSent = true; },
+          actionWithMultipleFilters(req, res) { res.headersSent = true; },
           beforeFilterOne() { return Promise.reject(error); },
           beforeFilterTwo() { laterFilterRan = true; }
         });
@@ -316,7 +338,7 @@ describe('foraker', function() {
         .catch((rejectionValue) => {
           expect(rejectionValue).to.equal(error);
           expect(laterFilterRan).to.equal(false);
-          expect(response.headerSent).to.equal(false);
+          expect(response.headersSent).to.equal(false);
         });
       });
 
@@ -336,7 +358,7 @@ describe('foraker', function() {
           beforeFilterTwo() { executionSequence.push('two'); },
           actionWithMultipleFilters(req, res) {
             executionSequence.push('action');
-            res.headerSent = true;
+            res.headersSent = true;
           }
         });
 
