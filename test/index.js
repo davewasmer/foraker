@@ -159,7 +159,7 @@ describe('foraker', function() {
           }
         });
 
-        return controller.action('actionThatDoesComplete', request, response, (err) => {
+        return controller.action('actionThatDoesComplete', request, response, () => {
           nextRan = true;
         }).then(() => {
           expect(nextRan).to.equal(false);
