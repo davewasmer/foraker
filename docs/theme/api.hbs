@@ -50,6 +50,9 @@
                   </span>
                 </h3>
               </div>
+              {{#if block.tags.private}}
+                <div class='private'>private</div>
+              {{/if}}
             {{/if}}
 
             <p class='method-description'>{{{block.description.full}}}</p>
