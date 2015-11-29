@@ -44,6 +44,6 @@
     "bluebird": "^2.9.34",
     "core-object": "^1.1.0",
     "ensure-array": "0.0.5",
-    "lodash-node": "^3.10.1"
+    "lodash": "^3.10.1"
   }
 }
